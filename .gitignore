@@ -24,6 +24,10 @@
 .DS_Store
 *.pem
 
+# app data (user-generated)
+/data/
+/public/uploads/
+
 # debug
 npm-debug.log*
 yarn-debug.log*
@@ -39,3 +43,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# audit / tooling artifacts
+.playwright-cli/
+open-carrusel*.log
+/.next/cache/
+
+# OS
+Thumbs.db

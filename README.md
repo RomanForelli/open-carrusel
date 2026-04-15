@@ -1,36 +1,79 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Open Carrusel
 
-## Getting Started
+> AI-powered Instagram carousel builder. Chat with Claude to design slides; export as PNGs at exact Instagram dimensions. Runs entirely on your machine — no accounts, no cloud.
 
-First, run the development server:
+## Quickstart (one command)
 
+1. Install [Claude Code](https://docs.anthropic.com/en/docs/claude-code) and authenticate.
+2. Clone and open in Claude Code:
+   ```bash
+   git clone https://github.com/Hainrixz/open-carrusel.git
+   cd open-carrusel
+   claude
+   ```
+3. In the Claude Code prompt, type:
+   ```
+   /start
+   ```
+
+That's it. Dependencies install, the local dev server boots, and your browser opens to the app. First run takes 1–2 minutes (Puppeteer downloads ~300 MB Chromium for PNG export); subsequent runs are seconds.
+
+## Requirements
+
+- **Node.js 20+**
+- **Claude Code** with an active Claude account (the in-app AI agent is a Claude CLI subprocess)
+- **~500 MB free disk** (Puppeteer's Chromium)
+- macOS, Linux, or Windows (WSL recommended on Windows)
+
+If you don't have Claude Code yet, you can still verify your environment with `npm run doctor` after cloning.
+
+## What it does
+
+- **Three-panel editor**: chat (left), live slide preview (center), drag-reorderable slide filmstrip (bottom)
+- **Slides are HTML/CSS** — Claude generates them, you tweak in chat, sandboxed iframe renders them safely
+- **Export the full carousel** as a ZIP of PNGs at 1080×1080 (square), 1080×1350 (portrait), or 1080×1920 (story)
+- **Brand config + templates** so the AI matches your style automatically
+- **Reference images** you upload influence the AI's design decisions
+- All data lives locally as JSON in `/data/`. Nothing leaves your machine except the AI calls Claude makes.
+
+## Commands (in Claude Code)
+
+| Command   | What it does |
+|-----------|--------------|
+| `/start [port]` | Install + seed + run + open browser. Idempotent. Optional port arg defaults to 3000. |
+| `/stop`   | Kill the dev server on :3000. |
+| `/reset`  | Wipe local carousels, uploads, exports, and re-seed defaults. Asks first. |
+| `/doctor` | Run setup diagnostics (Node, Claude CLI, deps, data, port). |
+
+You can also run them outside Claude Code: `npm run setup`, `npm run dev`, `npm run doctor`.
+
+## Architecture (short)
+
+- **Frontend**: Next.js 16 + React 19 + Tailwind v4, three-panel editor at `localhost:3000`
+- **AI agent**: Claude CLI spawned as a subprocess from `/api/chat`, streams responses via SSE
+- **Storage**: JSON files in `/data/` with `async-mutex` locking and atomic writes
+- **Export**: Puppeteer screenshots the same HTML the preview renders, at exact Instagram pixel dimensions
+- **Slides**: full HTML documents wrapped by `wrapSlideHtml()` in `src/lib/slide-html.ts` — the shared rendering contract between preview and export
+
+See [CLAUDE.md](./CLAUDE.md) for the full architecture, file map, and conventions.
+
+## Optional: extend the in-app AI agent
+
+The in-app agent already has `WebFetch` for basic web research. If you also want it to drive a real browser (logged-in pages, multi-step navigation, screenshots), install the [playwright-cli skill](https://docs.anthropic.com/en/docs/claude-code/skills) at the user level — its commands then become available to the agent automatically.
+
+For UI/animation contributions, the project follows [Emil Kowalski's design-engineering philosophy](https://animations.dev). The skill is optional:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npx skills add emilkowalski/skill
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+These add-ons are not required to use the app.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Contributing
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+PRs welcome. The animation system uses CSS-first transitions with `@starting-style` and Emil-style easings (see `src/app/globals.css`). Keep slides themselves untouched — `src/lib/slide-html.ts` and the iframe sandbox are the export contract.
 
-## Learn More
+Run the diagnostic before opening a PR: `npm run doctor` and `npm run build` should both pass cleanly.
 
-To learn more about Next.js, take a look at the following resources:
+## License
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT — see [LICENSE](./LICENSE).
