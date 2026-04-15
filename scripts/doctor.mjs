@@ -77,7 +77,7 @@ const missingData = dataFiles.filter((f) => !existsSync(join("data", f)));
 if (missingData.length === 0) {
   add(CHECK, "Data files", "all 5 seeded");
 } else if (missingData.length === dataFiles.length) {
-  add(FAIL, "Data files", "none seeded — run `/start` or `bash scripts/setup.sh`", true);
+  add(FAIL, "Data files", "none seeded — run `/start` or `npm run setup`", true);
 } else {
   add(WARN, "Data files", `${missingData.length} missing: ${missingData.join(", ")} — run /start`);
 }

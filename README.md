@@ -252,7 +252,7 @@ open-carrusel/
 ├── docs/screenshots/         ← README assets
 ├── public/uploads/           ← user uploads (gitignored): logos, reference images
 ├── scripts/
-│   ├── setup.sh              ← npm install + seed data dirs + Claude CLI detection
+│   ├── setup.mjs             ← npm install + seed data dirs + Claude CLI detection (cross-platform)
 │   └── doctor.mjs            ← env diagnostic (zero deps, runs pre-install)
 ├── src/
 │   ├── app/
@@ -290,11 +290,13 @@ open-carrusel/
 
 ### Environment variables (`.env.local`)
 
-Created automatically by `scripts/setup.sh` if it can find your Claude CLI. You can override:
+Created automatically by `scripts/setup.mjs` if it can find your Claude CLI. You can override:
 
 ```bash
 CLAUDE_CLI_PATH=/path/to/claude   # set if `which claude` doesn't find it
 ```
+
+On Windows, run `where claude` in PowerShell to find the path (typically `C:\Users\<you>\AppData\Roaming\npm\claude.cmd`), then set `CLAUDE_CLI_PATH` in `.env.local`.
 
 ### Brand config
 

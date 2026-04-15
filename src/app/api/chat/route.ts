@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { spawn } from "child_process";
+import crossSpawn from "cross-spawn";
 import { getClaudePath, isClaudeAvailable } from "@/lib/claude-path";
 import { buildSystemPrompt } from "@/lib/chat-system-prompt";
 import { getBrand } from "@/lib/brand";
@@ -84,18 +85,34 @@ export async function POST(request: NextRequest) {
     start(controller) {
       let childProcess: ReturnType<typeof spawn>;
 
+      const isWindowsShim =
+        process.platform === "win32" && /\.(cmd|bat)$/i.test(claudePath);
+      const spawner = isWindowsShim ? crossSpawn : spawn;
+
       try {
-        childProcess = spawn(claudePath, args, {
+        childProcess = spawner(claudePath, args, {
           cwd: process.cwd(),
           signal: abortController.signal,
           stdio: ["pipe", "pipe", "pipe"],
         });
         // Close stdin — we don't send input to the subprocess
         childProcess.stdin?.end();
-      } catch {
+      } catch (err) {
+        const e = err as NodeJS.ErrnoException;
+        console.error("[chat] failed to spawn Claude CLI", {
+          claudePath,
+          platform: process.platform,
+          code: e?.code,
+          message: e?.message,
+        });
         controller.enqueue(
           encoder.encode(
-            `event: error\ndata: ${JSON.stringify({ error: "Failed to start Claude CLI" })}\n\n`
+            `event: error\ndata: ${JSON.stringify({
+              error: "Failed to start Claude CLI",
+              code: e?.code,
+              path: claudePath,
+              message: e?.message,
+            })}\n\n`
           )
         );
         controller.close();
@@ -123,8 +140,12 @@ export async function POST(request: NextRequest) {
         }
       });
 
-      childProcess.stderr?.on("data", () => {
-        // ignore stderr (debug output, progress indicators)
+      let stderrBuf = "";
+      const STDERR_CAP = 8192;
+      childProcess.stderr?.on("data", (chunk: Buffer) => {
+        if (stderrBuf.length < STDERR_CAP) {
+          stderrBuf = (stderrBuf + chunk.toString()).slice(-STDERR_CAP);
+        }
       });
 
       // Timeout: kill subprocess after 8 minutes (autonomous mode creates many slides)
@@ -134,11 +155,27 @@ export async function POST(request: NextRequest) {
 
       childProcess.on("error", (err) => {
         clearTimeout(timeout);
+        const e = err as NodeJS.ErrnoException;
+        console.error("[chat] Claude subprocess error", {
+          claudePath,
+          platform: process.platform,
+          code: e?.code,
+          syscall: e?.syscall,
+          path: e?.path,
+          message: e?.message,
+          stderr: stderrBuf,
+        });
         try {
           childProcess.kill();
           controller.enqueue(
             encoder.encode(
-              `event: error\ndata: ${JSON.stringify({ error: err.message })}\n\n`
+              `event: error\ndata: ${JSON.stringify({
+                error: err.message,
+                code: e?.code,
+                syscall: e?.syscall,
+                path: e?.path,
+                stderr: stderrBuf || undefined,
+              })}\n\n`
             )
           );
           controller.close();
@@ -158,6 +195,28 @@ export async function POST(request: NextRequest) {
             });
           } catch {
             // skip
+          }
+        }
+
+        if (code && code !== 0) {
+          console.error("[chat] Claude subprocess exited non-zero", {
+            claudePath,
+            platform: process.platform,
+            exitCode: code,
+            stderr: stderrBuf,
+          });
+          try {
+            controller.enqueue(
+              encoder.encode(
+                `event: error\ndata: ${JSON.stringify({
+                  error: `Claude CLI exited with code ${code}`,
+                  exitCode: code,
+                  stderr: stderrBuf || undefined,
+                })}\n\n`
+              )
+            );
+          } catch {
+            // stream already closed
           }
         }
 

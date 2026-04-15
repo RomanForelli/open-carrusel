@@ -1,7 +1,7 @@
 ---
 description: Bootstrap Open Carrusel — run setup, launch dev server, open browser.
 argument-hint: [port]
-allowed-tools: Bash(node *), Bash(uname *), Bash(test *), Bash(lsof *), Bash(kill *), Bash(curl *), Bash(open *), Bash(xdg-open *), Bash(cmd.exe *), Bash(bash scripts/*), Bash(npm *), Bash(tail *), AskUserQuestion
+allowed-tools: Bash(node *), Bash(uname *), Bash(test *), Bash(lsof *), Bash(kill *), Bash(curl *), Bash(open *), Bash(xdg-open *), Bash(cmd.exe *), Bash(npm *), Bash(tail *), AskUserQuestion
 ---
 
 You are bootstrapping Open Carrusel for the user. Be terse — short status updates only, no preamble.
@@ -24,7 +24,7 @@ User-supplied port (optional): $ARGUMENTS
 
 3. **Run setup if needed.** If `node_modules` is NO **or** `Data seeded` is NO:
    - Tell the user: "Running setup (first time installs ~300MB Chromium for export — takes 1–2 minutes)..."
-   - Run `OC_SETUP_NO_DEV=1 bash scripts/setup.sh` with a 600s timeout. The env var tells setup.sh to skip its own dev-server start (`/start` manages the server itself in step 5).
+   - Run `OC_SETUP_NO_DEV=1 npm run setup` with a 600s timeout. The env var tells the setup script to skip its own dev-server start (`/start` manages the server itself in step 5). On Windows PowerShell use `$env:OC_SETUP_NO_DEV=1; npm run setup`; on cmd.exe use `set OC_SETUP_NO_DEV=1 && npm run setup`.
    - On failure, surface the error and stop.
 
 4. **Handle port collision.** If `<port>` is in use **and** the listening process is not the dev server you just started, ask via AskUserQuestion: "Port `<port>` is in use. Kill the existing process or pick a different port?" Options: Kill / Different port / Cancel.
@@ -46,4 +46,4 @@ User-supplied port (optional): $ARGUMENTS
    > Open Carrusel is running at http://localhost:`<port>`.
    > Logs: `tail -f /tmp/open-carrusel-dev.log` • Stop with `/stop`
 
-Idempotency note: re-running `/start` on a healthy install is fast — setup.sh skips already-installed deps and already-seeded data, and the port check skips the launch step if the server is already up.
+Idempotency note: re-running `/start` on a healthy install is fast — the setup script skips already-installed deps and already-seeded data, and the port check skips the launch step if the server is already up.
